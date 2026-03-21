@@ -1,0 +1,20 @@
+# Project-specific container services.
+# Shared tools (beads, gh) are provided by the OS repo — no need to define them here.
+#
+# Add project-specific services below. Pattern:
+#   1. Create Dockerfile.[service-name]
+#   2. Add service here
+#   3. Create thin wrapper in bin/[service-name]
+#
+# Example:
+#
+#   python:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.python
+#     user: "${UID:-1000}:${GID:-1000}"
+#     volumes:
+#       - .:/workspace
+#     working_dir: /workspace
+
+services: {}
