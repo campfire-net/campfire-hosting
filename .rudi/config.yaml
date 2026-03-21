@@ -1,0 +1,7 @@
+project: campfire-hosting
+user_email: baron@3dl.dev
+auth_type: oauth2
+auth_config:
+  tenant_id: bd7184bc-1d61-4f5b-8b01-c9b0e91d0ec8
+  client_id: 08918d17-8667-450b-aec3-1b5cb36e40b5
+  api_scope: api://08918d17-8667-450b-aec3-1b5cb36e40b5/rd.access

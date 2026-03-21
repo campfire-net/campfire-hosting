@@ -1,92 +1,80 @@
-<!-- BOOTSTRAP: If this file still contains [BRACKETED PLACEHOLDERS], the project
-     has not been bootstrapped. Read BOOTSTRAP.md and follow its instructions to
-     walk the user through the interactive bootstrap process before doing anything
-     else. Do NOT run the normal session protocol (bd ready, etc.) until bootstrap
-     is complete. -->
+# CLAUDE.md — Campfire Hosting
 
-# CLAUDE.md — [PROJECT NAME] Project Instructions
-
-> OS-level instructions (session protocol, beads workflow, model routing, blog pipeline, rules) are inherited from `~/.claude/CLAUDE.md`. This file contains only project-specific configuration.
+> OS-level instructions (session protocol, model routing, blog pipeline, rules) are inherited from `~/.claude/CLAUDE.md`. This file contains only project-specific configuration.
 
 ## Project
 
-**[PROJECT NAME]**: [One-line description of what this project is.]
+**Campfire Hosting**: Azure-native hosting infrastructure for the campfire coordination protocol. Runs the hosted cf-mcp service at mcp.getcampfire.dev (Azure Container Apps) and provides operator identity, metering, and CI/CD.
+
+## Work Tracking — rd (not bd)
+
+**This project uses `rd` for all work tracking.** The `bd` CLI is NOT used in this project.
+
+```bash
+rd list                    # All items
+rd list --status active    # Active items
+rd ready                   # Ready queue
+rd show <id>               # Item details
+rd create "Title" --type task  # New item
+rd update <id> --status active # Change status
+rd close <id> --reason "..."   # Close with reason
+```
 
 ## Agent Roster
 
-The PM agent coordinates work across specialized agents. Each has a spec in `docs/`.
-
-| Agent | Spec | Container | Role |
-|-------|------|-----------|------|
-| PM | CLAUDE.md | (beads via OS) | Prioritize, track, route work |
-| [Agent Name] | docs/agent-[name].md | [service name] | [Role description] |
+| Agent | Spec | Role |
+|-------|------|------|
+| PM | CLAUDE.md | Prioritize, track, route work |
+| implementer | .claude/agents/implementer.md | Build one work unit |
+| reviewer | .claude/agents/reviewer.md | Review for correctness + integration |
+| designer | .claude/agents/designer.md | Architecture decisions |
 
 **Routing rules:**
-- [Task type] → [Agent Name]
-- Everything else (prioritization, decisions, coordination) → PM
+- Azure infra (Bicep, ACA, Tables) → implementer (sonnet)
+- Auth/metering middleware → implementer (sonnet)
+- Store backend (Azure Tables) → implementer (opus)
+- CI/CD workflows → implementer (sonnet)
+- Architecture decisions → designer (opus)
 
 ## Task-Type → Model Mapping
 
 | Task Type | Model | Rationale |
 |-----------|-------|-----------|
-| [Novel design / architecture] | **Opus** | [Why this needs the strongest model] |
-| [Structured analysis / specs] | **Sonnet** | [Why mid-tier is sufficient] |
-| [Mechanical updates / templates] | **Haiku** | [Why cheap model works] |
+| Store interface, auth architecture | **Opus** | Novel design, multi-factor trade-offs |
+| Bicep templates, middleware, CI/CD | **Sonnet** | Structured implementation |
+| Config edits, env var updates | **Haiku** | Mechanical |
 
-## Design Change Cascade
-
-**Every design/architecture change MUST trigger these downstream beads:**
-
-A "design change" is any bead that modifies:
-- [Define what counts as a design change in this project]
+## Architecture
 
 ```
-Design Change (parent)
-├── 1. [Review Type] (P1, blocked by parent)
-│      Route to: [Agent]
-│      Assess: [What to check]
-│      Output: [What it produces]
-│
-├── 2. [Review Type] (P2, blocked by #1)
-│      Route to: [Agent]
-│      ...
-│
-└── N. [Final Check] (P3, blocked by #N-1)
-       Route to: [Agent]
-       ...
+infra/                    Azure Bicep templates
+  aca/                    Container Apps deployment (hosted service)
+  shared/                 Shared infra (storage account, app insights)
+cmd/
+  operator/               Operator management CLI (sign-up, API keys, metering)
+pkg/
+  store/azure/            Azure Table Storage backend (implements campfire store interface)
+  auth/                   Operator API key + agent session auth middleware
+  meter/                  Per-operator message metering
+  cache/                  In-memory cache + write-through layer
+.github/workflows/        CI/CD: build → GHCR → deploy ACA
 ```
 
-## Cross-Project Coordination
+## Source of Truth
 
-This project is part of the 3DL portfolio. Cross-project conventions (staff signals, cross-references, project registry) are inherited from `~/.claude/CLAUDE.md`. See `docs/cross-project-protocol.md` in the OS repo for full protocol.
+1. Design doc: campfire repo `docs/design-hosted-deployment.md`
+2. Bicep templates: `infra/`
+3. Implementation: `cmd/`, `pkg/`
 
-## Source of Truth Hierarchy
+## Conventions
 
-When artifacts disagree, resolve conflicts in this order:
+- Go standard style: `gofmt`, `go vet`
+- Azure Bicep for all infra (no Terraform, no ARM JSON)
+- One change per commit, descriptive message
+- All Azure resources tagged with `project: campfire-hosting`
 
-1. **[Highest authority]** — [Why this wins]
-2. **[Second authority]** — [Its relationship to #1]
-3. **[Third authority]** — [Its relationship to #2]
-4. **[Derived artifact]** — this synthesizes everything; it follows, never leads
+## Don't
 
-## Artifact Conventions
-
-- **[Artifact type]**: [Format and location]
-- **Specs and plans**: Structured markdown in `docs/`.
-- **Code**: In appropriate source directories, tracked by beads when relevant.
-
-All artifacts in `docs/` should be linked from a corresponding bead so nothing gets lost.
-
-## Repo Structure
-
-```
-[project-name]/
-├── CLAUDE.md            # This file — project instructions
-├── docker-compose.yml   # Project-specific container services
-├── bin/                 # Project-specific tool wrappers
-├── docs/                # Specs, plans, diagrams, agent specs
-│   ├── agent-*.md       # Agent specifications
-│   ├── guides/          # Step-by-step guides
-│   └── blog/            # Blog pipeline
-└── site/                # Website (if applicable)
-```
+- Don't put protocol-level changes here — those go in the campfire repo
+- Don't hardcode Azure credentials — use managed identity everywhere
+- Don't weaken tests to make them pass
