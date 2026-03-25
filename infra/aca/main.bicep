@@ -52,16 +52,6 @@ param azureStorageAccount string = 'stcampfirebpjpsl'
 @secure()
 param azureStorageKey string
 
-@description('Container registry server (e.g. ghcr.io).')
-param registryServer string = 'ghcr.io'
-
-@description('Container registry username.')
-param registryUsername string = ''
-
-@description('Container registry password (sensitive). Required for private registries.')
-@secure()
-param registryPassword string = ''
-
 @description('Name suffix for resources (defaults to uniqueString of resource group id).')
 param uniqueSuffix string = take(uniqueString(resourceGroup().id), 6)
 
@@ -110,19 +100,8 @@ resource cfUiApp 'Microsoft.App/containerApps@2023-05-01' = {
         // the 300s default being set at the environment level (see parameters file comment).
       }
 
-      // ── Registry credentials ────────────────────────────────────────────────
-      // Required for private container registries (e.g. private GHCR packages).
-      // Omit registryUsername/registryPassword for public images.
-      registries: registryUsername != '' ? [
-        {
-          server: registryServer
-          username: registryUsername
-          passwordSecretRef: 'registry-password'
-        }
-      ] : []
-
       // ── Secrets ────────────────────────────────────────────────────────────
-      secrets: union([
+      secrets: [
         {
           name: 'github-client-secret'
           value: githubClientSecret
@@ -131,12 +110,7 @@ resource cfUiApp 'Microsoft.App/containerApps@2023-05-01' = {
           name: 'azure-storage-key'
           value: azureStorageKey
         }
-      ], registryUsername != '' ? [
-        {
-          name: 'registry-password'
-          value: registryPassword
-        }
-      ] : [])
+      ]
     }
 
     template: {

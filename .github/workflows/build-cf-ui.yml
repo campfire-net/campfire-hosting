@@ -1,0 +1,67 @@
+name: Build cf-ui image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile.cf-ui'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [build-cf-ui]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: campfire-net/cf-ui
+
+jobs:
+  build:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout campfire-hosting (for Dockerfile)
+        uses: actions/checkout@v4
+
+      - name: Checkout campfire source
+        uses: actions/checkout@v4
+        with:
+          repository: campfire-net/campfire
+          ref: main
+          path: campfire-src
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run cf-ui tests
+        working-directory: campfire-src
+        run: go test ./cmd/cf-ui/...
+
+      - name: Vet
+        working-directory: campfire-src
+        run: go vet ./cmd/cf-ui/...
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push container image
+        uses: docker/build-push-action@v6
+        with:
+          context: campfire-src
+          file: Dockerfile.cf-ui
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+    outputs:
+      image-tag: ${{ github.sha }}
