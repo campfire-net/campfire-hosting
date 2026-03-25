@@ -52,6 +52,12 @@ param azureStorageAccount string = 'stcampfirebpjpsl'
 @secure()
 param azureStorageKey string
 
+@description('Custom domain hostname (e.g. app.example.com). Leave empty to skip custom domain binding.')
+param customDomainName string = ''
+
+@description('Resource ID of a managed certificate for the custom domain. Leave empty to skip.')
+param customDomainCertificateId string = ''
+
 @description('Name suffix for resources (defaults to uniqueString of resource group id).')
 param uniqueSuffix string = take(uniqueString(resourceGroup().id), 6)
 
@@ -87,6 +93,13 @@ resource cfUiApp 'Microsoft.App/containerApps@2023-05-01' = {
         // connectionIdleTimeout is in seconds; 300 = 5 minutes
         // Allows SSE streams to remain open between heartbeats
         allowInsecure: false
+        customDomains: customDomainName != '' ? [
+          {
+            name: customDomainName
+            certificateId: customDomainCertificateId
+            bindingType: customDomainCertificateId != '' ? 'SniEnabled' : 'Disabled'
+          }
+        ] : []
         traffic: [
           {
             weight: 100
