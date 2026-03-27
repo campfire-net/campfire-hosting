@@ -72,6 +72,14 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           value: storageConnectionString
         }
         {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: storageConnectionString
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: toLower(appName)
+        }
+        {
           name: 'FUNCTIONS_EXTENSION_VERSION'
           value: '~4'
         }
