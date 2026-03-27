@@ -42,7 +42,7 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
     tier: 'Dynamic'
   }
   properties: {
-    reserved: false    // false = Windows; set true for Linux Consumption (requires different stack)
+    reserved: true    // true = Linux Consumption
   }
 }
 
@@ -51,7 +51,7 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
   name: appName
   location: location
   tags: tags
-  kind: 'functionapp'
+  kind: 'functionapp,linux'
   identity: {
     type: 'SystemAssigned'    // enables Key Vault reference resolution
   }
@@ -70,14 +70,6 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         {
           name: 'AzureWebJobsStorage'
           value: storageConnectionString
-        }
-        {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storageConnectionString
-        }
-        {
-          name: 'WEBSITE_CONTENTSHARE'
-          value: toLower(appName)
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
