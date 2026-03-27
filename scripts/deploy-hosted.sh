@@ -30,7 +30,7 @@ LOCATION="${LOCATION:-eastus}"
 KEY_VAULT_NAME="${KEY_VAULT_NAME:-kv-campfire}"
 SKIP_CUSTOM_DOMAIN="${SKIP_CUSTOM_DOMAIN:-false}"
 DRY_RUN="${DRY_RUN:-false}"
-DOMAIN="mcp.getcampfire.dev"
+DOMAIN="${DOMAIN:-mcp.getcampfire.dev}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -74,6 +74,10 @@ DEPLOY_OUTPUT=$(run az deployment group create \
   --template-file "${REPO_ROOT}/infra/functions/main.bicep" \
   --parameters "${REPO_ROOT}/infra/functions/main.bicepparam" \
   --parameters createCustomDomain="${CREATE_DOMAIN}" \
+  --parameters domainName="${DOMAIN}" \
+  --parameters cfDomain="${DOMAIN}" \
+  --parameters keyVaultName="${KEY_VAULT_NAME}" \
+  --parameters location="${LOCATION}" \
   --output json 2>&1)
 
 if [[ "${DRY_RUN}" != "true" ]]; then
@@ -113,10 +117,10 @@ if [[ "${DRY_RUN}" != "true" ]] && [[ "${SKIP_CUSTOM_DOMAIN}" == "true" ]]; then
   echo "  HUMAN ACTION REQUIRED: Configure DNS"
   echo "══════════════════════════════════════════════════════════"
   echo "  Add a CNAME record:"
-  echo "    mcp.getcampfire.dev → ${FUNCTION_APP_NAME}.azurewebsites.net"
+  echo "    ${DOMAIN} → ${FUNCTION_APP_NAME}.azurewebsites.net"
   echo ""
   echo "  After DNS propagates (~5-15 min), re-run with:"
-  echo "    SKIP_CUSTOM_DOMAIN=false ./scripts/deploy-hosted.sh"
+  echo "    DOMAIN=${DOMAIN} SKIP_CUSTOM_DOMAIN=false ./scripts/deploy-hosted.sh"
   echo "══════════════════════════════════════════════════════════"
 fi
 
