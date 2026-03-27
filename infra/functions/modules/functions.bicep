@@ -87,6 +87,11 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'custom'
         }
+        {
+          // Run from package preserves execute permissions on Linux Consumption.
+          name: 'WEBSITE_RUN_FROM_PACKAGE'
+          value: '1'
+        }
 
         // ── Application Insights ───────────────────────────────────────────
         {
@@ -111,8 +116,11 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CF_SESSION_TOKEN)'
         }
         {
+          // CF_DOMAIN must include the /api path prefix because Azure Functions
+          // mounts HTTP triggers under /api/*. Peer-to-peer message delivery
+          // uses this URL to reach other instances.
           name: 'CF_DOMAIN'
-          value: cfDomain
+          value: '${cfDomain}/api'
         }
 
         // ── Custom handler forwarding ──────────────────────────────────────
