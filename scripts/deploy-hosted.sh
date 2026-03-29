@@ -4,9 +4,11 @@
 # Prerequisites (human gates — must be done before running this script):
 #   1. Azure CLI authenticated: az login
 #   2. Subscription selected: az account set --subscription <sub-id>
-#   3. Key Vault exists with CF_SESSION_TOKEN secret:
+#   3. Key Vault exists with CF_SESSION_TOKEN + FORGE_SERVICE_KEY secrets:
 #        az keyvault create --name kv-campfire --resource-group rg-campfire-hosting --location eastus
 #        az keyvault secret set --vault-name kv-campfire --name CF_SESSION_TOKEN --value "<token>"
+#        az keyvault secret set --vault-name kv-campfire --name FORGE_SERVICE_KEY --value "<forge-sk-...>"
+#      Or pass FORGE_SERVICE_KEY env var and the script stores it in Key Vault automatically.
 #   4. DNS CNAME configured: mcp.getcampfire.dev → <functionApp>.azurewebsites.net
 #      (Set SKIP_CUSTOM_DOMAIN=true on first deploy, add CNAME after, re-run with false.)
 #   5. AZURE_FUNCTIONAPP_PUBLISH_PROFILE secret set in GitHub repo settings
@@ -22,6 +24,8 @@
 #   KEY_VAULT_NAME      — Key Vault name (default: kv-campfire)
 #   SKIP_CUSTOM_DOMAIN  — Skip custom domain binding (default: false)
 #   DRY_RUN             — Print commands without running (default: false)
+#   FORGE_BASE_URL      — Forge API URL for metering (default: https://forge.3dl.dev)
+#   FORGE_ACCOUNT_ID    �� Forge account ID for metering (required for metered deploy)
 
 set -euo pipefail
 
@@ -31,6 +35,8 @@ KEY_VAULT_NAME="${KEY_VAULT_NAME:-kv-campfire}"
 SKIP_CUSTOM_DOMAIN="${SKIP_CUSTOM_DOMAIN:-false}"
 DRY_RUN="${DRY_RUN:-false}"
 DOMAIN="${DOMAIN:-mcp.getcampfire.dev}"
+FORGE_BASE_URL="${FORGE_BASE_URL:-https://forge.3dl.dev}"
+FORGE_ACCOUNT_ID="${FORGE_ACCOUNT_ID:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -78,6 +84,8 @@ DEPLOY_OUTPUT=$(run az deployment group create \
   --parameters cfDomain="${DOMAIN}" \
   --parameters keyVaultName="${KEY_VAULT_NAME}" \
   --parameters location="${LOCATION}" \
+  --parameters forgeBaseUrl="${FORGE_BASE_URL}" \
+  --parameters forgeAccountId="${FORGE_ACCOUNT_ID}" \
   --output json 2>&1)
 
 if [[ "${DRY_RUN}" != "true" ]]; then
@@ -103,7 +111,17 @@ if [[ "${DRY_RUN}" != "true" ]]; then
     --output none || log "WARNING: Role assignment may already exist. Continuing."
 fi
 
-# ── Step 5: Configure GitHub variable AZURE_FUNCTIONAPP_NAME ──────────────────
+# ── Step 5: Store FORGE_SERVICE_KEY in Key Vault (if not already present) ─────
+if [[ "${DRY_RUN}" != "true" ]] && [[ -n "${FORGE_SERVICE_KEY:-}" ]]; then
+  log "Storing FORGE_SERVICE_KEY in Key Vault ${KEY_VAULT_NAME}..."
+  run az keyvault secret set \
+    --vault-name "${KEY_VAULT_NAME}" \
+    --name FORGE_SERVICE_KEY \
+    --value "${FORGE_SERVICE_KEY}" \
+    --output none || log "WARNING: Could not set FORGE_SERVICE_KEY in Key Vault."
+fi
+
+# ── Step 6: Configure GitHub variable AZURE_FUNCTIONAPP_NAME ──────────────────
 if [[ "${DRY_RUN}" != "true" ]] && command -v gh &>/dev/null; then
   log "Setting AZURE_FUNCTIONAPP_NAME GitHub variable..."
   run gh variable set AZURE_FUNCTIONAPP_NAME --body "${FUNCTION_APP_NAME}" || \

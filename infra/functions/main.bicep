@@ -36,6 +36,12 @@ param cfDomain string = 'mcp.getcampfire.dev'
 @description('Whether to create the custom domain binding. Set false on first deploy until DNS CNAME is in place.')
 param createCustomDomain bool = true
 
+@description('Forge API base URL for metering.')
+param forgeBaseUrl string = 'https://forge.3dl.dev'
+
+@description('Forge account ID for metering.')
+param forgeAccountId string = ''
+
 // ─── Naming ──────────────────────────────────────────────────────────────────
 // All resource names follow Azure convention: <type>-<project>-<env>
 // Using a unique suffix derived from the resource group id to avoid global name conflicts.
@@ -85,6 +91,8 @@ module functions 'modules/functions.bicep' = {
     appInsightsInstrumentationKey: monitoring.outputs.appInsightsInstrumentationKey
     keyVaultName: keyVaultName
     cfDomain: cfDomain
+    forgeBaseUrl: forgeBaseUrl
+    forgeAccountId: forgeAccountId
   }
 }
 

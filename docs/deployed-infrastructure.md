@@ -105,6 +105,9 @@ All instances share the same configuration pattern:
 | `CF_DOMAIN` | `mcp.<region>.getcampfire.dev` |
 | `CF_SESSION_TOKEN` | Key Vault ref: `@Microsoft.KeyVault(VaultName=<kv>;SecretName=CF_SESSION_TOKEN)` |
 | `AZURE_STORAGE_CONNECTION_STRING` | (auto from Bicep — points to instance storage) |
+| `FORGE_BASE_URL` | `https://forge.3dl.dev` |
+| `FORGE_SERVICE_KEY` | Key Vault ref: `@Microsoft.KeyVault(VaultName=<kv>;SecretName=FORGE_SERVICE_KEY)` |
+| `FORGE_ACCOUNT_ID` | (set per deployment — forge account for metering) |
 
 ## Deployment
 

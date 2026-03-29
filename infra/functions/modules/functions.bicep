@@ -31,6 +31,8 @@ param appInsightsConnectionString string
 param appInsightsInstrumentationKey string
 param keyVaultName string
 param cfDomain string
+param forgeBaseUrl string = 'https://forge.3dl.dev'
+param forgeAccountId string = ''
 
 // Consumption plan (Y1) — serverless, scale-to-zero
 resource hostingPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
@@ -121,6 +123,21 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           // uses this URL to reach other instances.
           name: 'CF_DOMAIN'
           value: '${cfDomain}/api'
+        }
+
+        // ── Forge metering ─────────────────────────────────────────────────
+        {
+          name: 'FORGE_BASE_URL'
+          value: forgeBaseUrl
+        }
+        {
+          // FORGE_SERVICE_KEY read from Key Vault via managed identity reference.
+          name: 'FORGE_SERVICE_KEY'
+          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=FORGE_SERVICE_KEY)'
+        }
+        {
+          name: 'FORGE_ACCOUNT_ID'
+          value: forgeAccountId
         }
 
         // ── Custom handler forwarding ──────────────────────────────────────
