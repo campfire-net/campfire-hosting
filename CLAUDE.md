@@ -4,11 +4,15 @@
 
 ## Project
 
-**Campfire Hosting**: Azure-native hosting infrastructure for the campfire coordination protocol. Runs the hosted cf-mcp service at mcp.getcampfire.dev (Azure Container Apps) and provides operator identity, metering, and CI/CD.
+**Campfire Hosting**: Azure-hosted campfire coordination service. Three sovereign regions (East, West, Central). Live at mcp.getcampfire.dev. Metered through Forge's billing pipeline.
 
-## Work Tracking — rd (not bd)
+## Executive Owner
 
-**This project uses `rd` for all work tracking.** The `bd` CLI is NOT used in this project.
+**CIO** (agent spec: `~/projects/ceo/.claude/agents/cio.md`). The CIO owns platform operations for this repo: deployment health, metering accuracy, forge integration, service key management. Operational work routes to CIO. Implementation work routes to implementer.
+
+## Work Tracking — rd
+
+**This project uses `rd` for all work tracking.**
 
 ```bash
 rd list                    # All items
@@ -17,19 +21,20 @@ rd ready                   # Ready queue
 rd show <id>               # Item details
 rd create "Title" --type task  # New item
 rd update <id> --status active # Change status
-rd close <id> --reason "..."   # Close with reason
+rd done <id> --reason "..."    # Close with reason
 ```
 
 ## Agent Roster
 
 | Agent | Spec | Role |
 |-------|------|------|
-| PM | CLAUDE.md | Prioritize, track, route work |
+| CIO | `~/projects/ceo/.claude/agents/cio.md` | Platform ops owner — deployment, metering, forge integration |
 | implementer | .claude/agents/implementer.md | Build one work unit |
 | reviewer | .claude/agents/reviewer.md | Review for correctness + integration |
 | designer | .claude/agents/designer.md | Architecture decisions |
 
 **Routing rules:**
+- Deployment ops, metering health, forge integration → CIO (sonnet)
 - Azure infra (Bicep, ACA, Tables) → implementer (sonnet)
 - Auth/metering middleware → implementer (sonnet)
 - Store backend (Azure Tables) → implementer (opus)
@@ -51,20 +56,34 @@ infra/                    Azure Bicep templates
   aca/                    Container Apps deployment (hosted service)
   shared/                 Shared infra (storage account, app insights)
 cmd/
-  operator/               Operator management CLI (sign-up, API keys, metering)
+  operator/               Sysop management CLI (sign-up, API keys, metering)
 pkg/
   store/azure/            Azure Table Storage backend (implements campfire store interface)
-  auth/                   Operator API key + agent session auth middleware
-  meter/                  Per-operator message metering
+  auth/                   Sysop API key + agent session auth middleware
+  meter/                  Per-sysop message metering + Forge billing client integration
   cache/                  In-memory cache + write-through layer
+docs/
+  runbooks/               Operational runbooks (deployment, metering, incident response)
 .github/workflows/        CI/CD: build → GHCR → deploy ACA
 ```
+
+## Forge Integration
+
+Campfire-hosting emits usage events to Forge via `pkg/billingclient`. Every metered operation (message send/read, campfire_init, join, beacon ops) generates a `UsageEvent` posted to `POST /v1/usage/ingest`.
+
+| Config | Source | Description |
+|--------|--------|-------------|
+| `FORGE_BASE_URL` | env | Forge API base URL |
+| `FORGE_SERVICE_KEY` | env / Key Vault | RoleService key for authentication |
+
+**Fail-open**: Metering failures are logged but do not block campfire operations. A broken forge connection degrades billing accuracy, not service availability.
 
 ## Source of Truth
 
 1. Design doc: campfire repo `docs/design-hosted-deployment.md`
 2. Bicep templates: `infra/`
 3. Implementation: `cmd/`, `pkg/`
+4. Operational runbooks: `docs/runbooks/`
 
 ## Conventions
 
@@ -78,3 +97,4 @@ pkg/
 - Don't put protocol-level changes here — those go in the campfire repo
 - Don't hardcode Azure credentials — use managed identity everywhere
 - Don't weaken tests to make them pass
+- Don't block campfire operations on forge unavailability (fail-open metering)
